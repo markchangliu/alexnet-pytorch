@@ -7,9 +7,25 @@ from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from loggers import build_logger
-from optimizers import adjust_lr_multiplier, set_lr, get_lr
+from src.loggers import build_logger
+from src.optimizers import adjust_lr, set_lr, get_lr
 
+
+def save_ckpt(
+    model: nn.Module,
+    optimizer: Optimizer,
+    curr_epoch: int,
+    total_epoch: int,
+    save_ckpt_p: Union[str, os.PathLike]
+) -> None:
+    state_dict = {
+        "model": model.state_dict(),
+        "optimizer": optimizer.state_dict(),
+        "curr_epoch": curr_epoch,
+        "total_epoch": total_epoch
+    }
+    torch.save(state_dict, save_ckpt_p)
+    
 
 @torch.no_grad()
 def test_model(
@@ -19,15 +35,31 @@ def test_model(
     eval_func: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
     device: str,
 ) -> Union[float, float]:
-    model.eval()
+    if model.training:
+        model.eval() 
 
-    curr_batch = 0
-    curr_loss_val = 0
-    curr_acc_val = 0
+    curr_iter = 1
+    loss = 0
+    acc = 0
+    batch_size = test_loader.batch_size
 
     for imgs, gt_cat_ids in test_loader:
+        gt_cat_ids = gt_cat_ids[:batch_size]
+
         imgs: torch.Tensor = imgs.to(device)
         gt_cat_ids: torch.Tensor = gt_cat_ids.to(device)
+        pred_logits: torch.Tensor = model(imgs)
+
+        pred_logits = pred_logits.reshape(-1, 10, 1)
+        pred_logits = torch.mean(pred_logits, dim = 1)
+
+        curr_loss = loss_func(gt_cat_ids, pred_logits).item()
+        curr_acc = eval_func(gt_cat_ids, pred_logits).item()
+
+        loss = loss + (curr_loss - loss) / curr_iter
+        acc = acc + (curr_acc - acc) / curr_iter
+    
+    return loss, acc
 
 
 def train_model(
@@ -69,6 +101,8 @@ def train_model(
     curr_lrs = [lr * warm_up_lr_multiplier for lr in init_lrs]
     set_lr(optimizer, curr_lrs)
 
+    last_loss_val = float("inf")
+
     for i in range(num_epoches):
 
         curr_epoch += 1
@@ -108,5 +142,35 @@ def train_model(
             
         if curr_epoch > warm_up_epoch_period:
             set_lr(optimizer, init_lrs)
+            msg = f"[Train] epoch {curr_epoch}/{num_epoches}, done warm up"
+            logger.info(msg)
         
         if curr_epoch % eval_save_epoch_period == 0:
+            model.eval()
+
+            test_loss, test_acc = test_model(
+                model, test_loader, loss_func, eval_func, device
+            )
+
+            msg = f"[Test] epoch {curr_epoch}/{num_epoches}, "
+            msg += f"loss {test_loss:.3f}, accuracy {test_acc:.3f}"
+
+            logger.info(msg)
+            writer.add_scalar("Test/loss", test_loss)
+            writer.add_scalar("Test/accuracy", test_acc)
+
+            save_ckpt_p = os.path.join(ckpt_dir, f"epoch{curr_epoch}.pth")
+            save_ckpt(model, optimizer, curr_epoch, num_epoches, save_ckpt_p)
+
+            model.train()
+        
+        if abs(last_loss_val - loss_val) / loss_val < 0.1:
+            adjust_lr(optimizer, adjust_lr_multiplier)
+            
+            msg = f"[Train] epoch {curr_epoch}/{num_epoches}, "
+            msg += f"last_loss: {last_loss_val:.3f}, "
+            msg += f"curr_loss: {loss_val:.3f}, "
+            msg += f"lower lr by: {adjust_lr_multiplier}"
+
+            logger.info(msg)
+

@@ -2,7 +2,6 @@ from typing import List, Union, Dict
 
 import torch.nn as nn
 from torch.optim import SGD
-from torch.optim.lr_scheduler import LRScheduler
 
 
 def build_sgd(
@@ -39,7 +38,7 @@ def get_lr(sgd: SGD) -> List[float]:
     
     return lrs
 
-def adjust_lr_multiplier(
+def adjust_lr(
     sgd: SGD,
     gamma: float
 ) -> None:

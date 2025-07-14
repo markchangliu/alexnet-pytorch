@@ -47,14 +47,13 @@ class AlexNet(nn.Module):
         - `logits`: `torch.Tensor`, shape `(n, num_classes)`
         """
         y = self.c1(imgs)
-        y = F.relu(y)
         y = self.lrn(y)
+        y = F.relu(y)
         y = self.pool1(y)
 
-
         y = self.c2(y)
-        y = F.relu(y)
         y = self.lrn(y)
+        y = F.relu(y)
         y = self.pool2(y)
 
         y = self.c3(y)
