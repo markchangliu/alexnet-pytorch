@@ -45,7 +45,8 @@ def train_model(
     eval_save_epoch_period: int,
     warm_up_epoches: int,
     warm_up_lr_multiplier: float,
-    adjust_lr_multiplier: float
+    adjust_lr_multiplier: float,
+    adjust_lr_loss_delta: float
 ) -> None:
     assert device.startswith("cuda")
     
@@ -143,7 +144,7 @@ def train_model(
 
             model.train()
         
-        if loss_last_epoch - loss_curr_epoch < 1e-6:
+        if loss_last_epoch - loss_curr_epoch < adjust_lr_loss_delta:
             adjust_lr(optimizer, adjust_lr_multiplier)
             
             msg = f"[Train] epoch {curr_epoch}/{num_epoches}, "
@@ -167,15 +168,13 @@ def run_train(
     eigen_val = torch.as_tensor(dataset_cfg["eigen_val"])
     eigen_vec = torch.as_tensor(dataset_cfg["eigen_vec"])
 
+    class_list_p = dataset_cfg["class_list"]
     train_data_root = dataset_cfg["train_data_root"]
     test_data_root = dataset_cfg["test_data_root"]
     train_loader_cfg = cfg["train_loader"]
     test_loader_cfg = cfg["test_loader"]
 
-    dirnames = os.listdir(train_data_root)
-    dirnames = [d for d in dirnames if os.path.isdir(os.path.join(train_data_root, d))]
-    dirnames.sort()
-    cat_name_id_dict = {n: i for i, n in zip(range(len(dirnames)), dirnames)}
+    cat_name_id_dict = get_cat_name_id_dict(class_list_p)
 
     train_loader = build_train_loader(
         [train_data_root],
@@ -226,5 +225,6 @@ def run_train(
         runtime_cfg["eval_save_epoch_period"],
         scheduler_cfg["warm_up_epoches"],
         scheduler_cfg["warm_up_lr_multiplier"],
-        scheduler_cfg["adjust_lr_multiplier"]
+        scheduler_cfg["adjust_lr_multiplier"],
+        scheduler_cfg["adjust_lr_loss_delta"]
     )
