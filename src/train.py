@@ -8,11 +8,12 @@ from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from src.dataloaders import build_train_loader, build_test_loader
+from src.dataloaders import build_train_loader, build_test_loader, build_test_loader_tta
 from src.loggers import build_logger
 from src.models import AlexNet, loss_func, eval_func, init_weights
 from src.optimizers import adjust_lr, set_lr, get_lr, build_sgd
-from src.transforms import build_train_transform, build_test_transfrom
+from src.test import test_model, test_model_tta
+from src.utils import get_cat_name_id_dict
 
 
 def save_ckpt(
@@ -29,42 +30,6 @@ def save_ckpt(
         "total_epoch": total_epoch
     }
     torch.save(state_dict, save_ckpt_p)
-    
-
-@torch.no_grad()
-def test_model(
-    model: nn.Module,
-    test_loader: DataLoader,
-    loss_func: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
-    eval_func: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
-    device: str,
-) -> Union[float, float]:
-    if model.training:
-        model.eval() 
-
-    curr_iter = 1
-    loss = 0
-    acc = 0
-    batch_size = test_loader.batch_size
-
-    for imgs, gt_cat_ids in test_loader:
-        gt_cat_ids = gt_cat_ids[:batch_size]
-
-        imgs: torch.Tensor = imgs.to(device, non_blocking = True)
-        gt_cat_ids: torch.Tensor = gt_cat_ids.to(device, non_blocking = True)
-        pred_logits: torch.Tensor = model(imgs)
-
-        pred_logits = pred_logits.reshape(batch_size, 10, -1)
-        pred_logits = torch.mean(pred_logits, dim = 1)
-
-        curr_loss = loss_func(gt_cat_ids, pred_logits).item()
-        curr_acc = eval_func(gt_cat_ids, pred_logits).item()
-
-        loss = loss + (curr_loss - loss) / curr_iter
-        acc = acc + (curr_acc - acc) / curr_iter
-    
-    return loss, acc
-
 
 def train_model(
     model: nn.Module,
@@ -191,9 +156,9 @@ def train_model(
         loss_last_epoch = loss_curr_epoch
 
 def run_train(
-    cfg_p: Union[str, os.PathLike],
+    train_cfg_p: Union[str, os.PathLike],
 ) -> None:
-    with open(cfg_p, "r") as f:
+    with open(train_cfg_p, "r") as f:
         cfg = json.load(f)
 
     dataset_cfg = cfg["dataset"]

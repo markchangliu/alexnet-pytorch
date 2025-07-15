@@ -172,6 +172,27 @@ def build_test_transfrom(
     channel_std: torch.Tensor
 ) -> Compose:
     short_edge_size = 256
+    center_crop_size = 224
+
+    to_tensor = ToTensor()
+    normalize = Normalize(channel_mean, channel_std)
+    short_edge_resize = ShortEdgeResize(short_edge_size)
+    center_crop = CenterCrop(center_crop_size)
+
+    test_transform = Compose([
+        to_tensor,
+        normalize,
+        short_edge_resize,
+        center_crop
+    ])
+
+    return test_transform
+
+def build_test_transfrom_tta(
+    channel_mean: torch.Tensor,
+    channel_std: torch.Tensor
+) -> Compose:
+    short_edge_size = 256
     corner_center_crop_size = 224
 
     to_tensor = ToTensor()

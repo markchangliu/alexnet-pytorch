@@ -7,15 +7,17 @@ import cv2
 import numpy as np
 
 
-def load_tiny_imagenet_cats(
-    data_root: Union[str, os.PathLike]
+def get_cat_name_id_dict(
+    class_list_p: Union[str, os.PathLike]
 ) -> Dict[str, int]:
     cat_name_id_dict = {}
+    curr_cat_id = 0
 
-    dirnames = os.listdir(data_root)
-    dirnames = [d for d in dirnames if os.path.isdir(os.path.join(data_root, d))]
-    dirnames.sort()
-    cat_name_id_dict = {d: i for i, d in enumerate(dirnames)}
+    with open(class_list_p, "r") as f:
+        for line in f:
+            cat_name = line.strip()
+            cat_name_id_dict[cat_name] = curr_cat_id
+            curr_cat_id += 1
 
     return cat_name_id_dict
 

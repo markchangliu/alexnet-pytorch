@@ -8,7 +8,7 @@ import torch
 from torch.utils.data import Dataset
 
 
-def collate_fn_train(
+def collate_fn(
     batch: List[Tuple[torch.Tensor, int]]
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
@@ -28,7 +28,7 @@ def collate_fn_train(
 
     return batch_imgs, batch_cat_ids
 
-def collate_fn_test(
+def collate_fn_tta(
     batch: List[Tuple[torch.Tensor, int]],
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
