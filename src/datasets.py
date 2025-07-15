@@ -24,7 +24,7 @@ def collate_fn_train(
     batch_imgs = [d[0] for d in batch]
     batch_cat_ids = [d[1] for d in batch]
     batch_imgs = torch.concat(batch_imgs, dim = 0)
-    batch_cat_ids = torch.as_tensor(batch_cat_ids, dtype = torch.int32)
+    batch_cat_ids = torch.as_tensor(batch_cat_ids, dtype = torch.int64)
 
     return batch_imgs, batch_cat_ids
 
@@ -47,7 +47,7 @@ def collate_fn_test(
     batch_cat_ids = [d[1] for d in batch]
     batch_cat_ids = batch_cat_ids * 2 # itself and flip
     batch_cat_ids = batch_cat_ids * 5 # 5 crops
-    batch_cat_ids = torch.as_tensor(batch_cat_ids, dtype = torch.int32)
+    batch_cat_ids = torch.as_tensor(batch_cat_ids, dtype = torch.int64)
 
     assert batch_imgs.shape[0] == batch_cat_ids.shape[0]
 

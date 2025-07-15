@@ -5,7 +5,7 @@ from torch.optim import SGD
 
 
 def build_sgd(
-    model_params: List[Union[nn.Parameter], Dict[str, nn.Parameter]],
+    model_params: List[Union[nn.Parameter, Dict[str, nn.Parameter]]],
     lr_gloabl: float,
     momentum_global: float,
     weight_decay_global: float
