@@ -22,7 +22,7 @@ def test_model_tta(
     if model.training:
         model.eval() 
 
-    curr_iter = 1
+    curr_loop = 1
     loss = 0
     acc = 0
     batch_size = test_loader.batch_size
@@ -42,8 +42,10 @@ def test_model_tta(
         curr_loss = loss_func(gt_cat_ids, pred_logits).item()
         curr_acc = eval_func(gt_cat_ids, pred_logits).item()
 
-        loss = loss + (curr_loss - loss) / curr_iter
-        acc = acc + (curr_acc - acc) / curr_iter
+        loss = loss + (curr_loss - loss) / curr_loop
+        acc = acc + (curr_acc - acc) / curr_loop
+
+        curr_loop += 1
     
     return loss, acc
 
@@ -58,10 +60,9 @@ def test_model(
     if model.training:
         model.eval() 
 
-    curr_iter = 1
+    curr_loop = 1
     loss = 0
     acc = 0
-    batch_size = test_loader.batch_size
 
     for imgs, gt_cat_ids in test_loader:
         gt_cat_ids: torch.Tensor = gt_cat_ids.to(device, non_blocking = True)
@@ -71,8 +72,10 @@ def test_model(
         curr_loss = loss_func(gt_cat_ids, pred_logits).item()
         curr_acc = eval_func(gt_cat_ids, pred_logits).item()
 
-        loss = loss + (curr_loss - loss) / curr_iter
-        acc = acc + (curr_acc - acc) / curr_iter
+        loss = loss + (curr_loss - loss) / curr_loop
+        acc = acc + (curr_acc - acc) / curr_loop
+
+        curr_loop += 1
     
     return loss, acc
 
