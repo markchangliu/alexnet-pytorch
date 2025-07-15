@@ -101,16 +101,19 @@ def train_model(
 
     curr_epoch = 0
     curr_iter = 0
+
     init_lrs = get_lr(optimizer)
-    curr_lrs = [lr * warm_up_lr_multiplier for lr in init_lrs]
-    set_lr(optimizer, curr_lrs)
+    warm_up_lrs = [lr * warm_up_lr_multiplier for lr in init_lrs]
+    set_lr(optimizer, warm_up_lrs)
+    warm_up_flag = True
 
     last_print_iter = 0
-    last_loss_val = float("inf")
+    loss_last_epoch = float("inf")
 
     for i in range(num_epoches):
 
         curr_epoch += 1
+        loss_curr_epoch = 0
 
         for j, (imgs, gt_cat_ids) in enumerate(train_loader):
             imgs: torch.Tensor = imgs.to(device, non_blocking = True)
@@ -125,9 +128,12 @@ def train_model(
 
             curr_iter += batch_size
 
+            loss_val = loss.item()
+            loss_curr_epoch = loss_curr_epoch + (loss_val - loss_curr_epoch) / (j + 1)
+
             if curr_iter >= last_print_iter + print_iter_period:
+                curr_lrs = get_lr(optimizer)
                 metric_val = eval_func(gt_cat_ids, pred_logits).item()
-                loss_val = loss.item()
 
                 msg = f"[Train] epoch {curr_epoch}/{num_epoches}, "
                 msg += f"iter {curr_iter}/{num_iters}, "
@@ -139,18 +145,19 @@ def train_model(
                 msg += "]"
             
                 logger.info(msg)
-                writer.add_scalar("Train/loss", loss_val)
-                writer.add_scalar("Train/accuracy", metric_val)
+                writer.add_scalar("Train/loss", loss_val, curr_iter)
+                writer.add_scalar("Train/accuracy", metric_val, curr_iter)
 
                 for _, lr in enumerate(curr_lrs):
-                    writer.add_scalar(f"Train/lr{_}", lr)
+                    writer.add_scalar(f"Train/lr{_}", lr, curr_iter)
                 
                 last_print_iter = curr_iter
             
-        if curr_epoch >= warm_up_epoches:
+        if curr_epoch >= warm_up_epoches and warm_up_flag is True:
             set_lr(optimizer, init_lrs)
             msg = f"[Train] epoch {curr_epoch}/{num_epoches}, done warm up"
             logger.info(msg)
+            warm_up_flag = False
         
         if curr_epoch % eval_save_epoch_period == 0:
             model.eval()
@@ -163,23 +170,25 @@ def train_model(
             msg += f"loss {test_loss:.3f}, accuracy {test_acc:.3f}"
 
             logger.info(msg)
-            writer.add_scalar("Test/loss", test_loss)
-            writer.add_scalar("Test/accuracy", test_acc)
+            writer.add_scalar("Test/loss", test_loss, curr_iter)
+            writer.add_scalar("Test/accuracy", test_acc, curr_iter)
 
             save_ckpt_p = os.path.join(ckpt_dir, f"epoch{curr_epoch}.pth")
             save_ckpt(model, optimizer, curr_epoch, num_epoches, save_ckpt_p)
 
             model.train()
         
-        if abs(last_loss_val - loss_val) / loss_val < 0.1:
+        if loss_last_epoch - loss_curr_epoch < 1e-6:
             adjust_lr(optimizer, adjust_lr_multiplier)
             
             msg = f"[Train] epoch {curr_epoch}/{num_epoches}, "
-            msg += f"last_loss: {last_loss_val:.3f}, "
-            msg += f"curr_loss: {loss_val:.3f}, "
+            msg += f"last_epoch_loss: {loss_last_epoch:.3f}, "
+            msg += f"curr_epoch_loss: {loss_curr_epoch:.3f}, "
             msg += f"lower lr by: {adjust_lr_multiplier}"
 
             logger.info(msg)
+
+        loss_last_epoch = loss_curr_epoch
 
 def run_train(
     cfg_p: Union[str, os.PathLike],
