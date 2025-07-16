@@ -1,0 +1,52 @@
+{
+    "model": {
+        "num_classes": 200
+    },
+
+    "dataset": {
+        "channel_mean": [0.48023694, 0.44806704, 0.39750364],
+        "channel_std": [0.22953526, 0.22623344, 0.22549918],
+        "eigen_val": [0.20419837, 0.01972287, 0.00413188],
+        "eigen_vec": [
+            [-0.56616026, -0.72411767, 0.3938479],
+            [-0.5837257, 0.01484647, -0.81181518],
+            [-0.58200246, 0.68951663, 0.43109158]
+        ],
+        "class_list": "/data/cliu/large_files/projects/tiny-imagenet-200/data/wnids.txt",
+        "train_data_root": "/data/cliu/large_files/projects/tiny-imagenet-200/data/train",
+        "test_data_root": "/data/cliu/large_files/projects/tiny-imagenet-200/data/val" 
+    },
+
+    "train_loader": {
+        "batch_size": 64,
+        "num_workers": 16
+    },
+
+    "test_loader": {
+        "batch_size": 64,
+        "num_workers": 16
+    },
+
+    "optimizer": {
+        "global": {
+            "lr": 1e-3,
+            "momentum": 0.9,
+            "weight_decay": 5e-4
+        }
+    },
+
+    "scheduler": {
+        "warm_up_epoches": 1,
+        "warm_up_lr_multiplier": 0.1,
+        "adjust_lr_multiplier": 0.1,
+        "adjust_lr_loss_delta": 1e-5
+    },
+
+    "runtimes": {
+        "export_dir": "/data/cliu/large_files/projects/tiny-imagenet-200/runs/train_20250715",
+        "num_epoches": 90,
+        "device": "cuda:1",
+        "print_iter_period": 10000,
+        "eval_save_epoch_period": 3
+    }
+}
